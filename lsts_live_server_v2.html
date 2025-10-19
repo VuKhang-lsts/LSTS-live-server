@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LSTS live server — HTML/CSS/JS Live Editor</title>
+  <style>
+    :root{
+      --bg:#0f172a;        /* slate-900 */
+      --panel:#111827;     /* gray-900 */
+      --ink:#e5e7eb;       /* gray-200 */
+      --muted:#9ca3af;     /* gray-400 */
+      --accent:#22c55e;    /* green-500 */
+      --warning:#ef4444;   /* red-500 */
+      --border:#1f2937;    /* gray-800 */
+      --header-h:56px;
+      --footer-h:36px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+      overflow:hidden;
+    }
+    .topbar{
+      display:flex; align-items:center; gap:.5rem;
+      padding:.6rem .9rem; border-bottom:1px solid var(--border);
+      background:linear-gradient(180deg, #0b1220, #0f172a);
+      position:sticky; top:0; z-index:10;
+      flex-wrap: wrap;
+      min-height:var(--header-h);
+    }
+    .logo{
+      height:28px; width:auto; display:block;
+      filter:none; /* keep original brand colors */
+    }
+    .topbar h1{font-size:1rem; margin:0; letter-spacing:.4px; color:#c7d2fe}
+    .topbar .spacer{flex:1}
+    button, .toggle, .btn-like{
+      background:#111827; color:var(--ink); border:1px solid var(--border);
+      border-radius:10px; padding:.45rem .7rem; cursor:pointer; font-weight:600;
+    }
+    button:hover, .btn-like:hover{border-color:#2b3444}
+    .toggle{display:flex; align-items:center; gap:.5rem; user-select:none}
+    .toggle input{accent-color:var(--accent); width:1.1rem; height:1.1rem}
+    .layout{
+      height:calc(100% - var(--header-h) - var(--footer-h));
+      display:grid;
+      grid-template-columns:minmax(320px, 42%) 1fr;
+      gap:0;
+    }
+    .left{
+      display:grid;
+      grid-template-rows: 1fr 1fr 1fr;
+      border-right:1px solid var(--border);
+      min-width:280px;
+    }
+    .panel{
+      display:grid; grid-template-rows:auto 1fr;
+      min-height:0; border-bottom:1px solid var(--border);
+      background:var(--panel);
+    }
+    .panel .head{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:.5rem .8rem; border-bottom:1px solid var(--border);
+      background:#0b1220; position:sticky; top:0;
+    }
+    .label{font-weight:800; letter-spacing:.5px; color:#93c5fd}
+    textarea{
+      width:100%; height:100%; resize:none; border:0; outline:none;
+      padding:.7rem .8rem; background:transparent; color:var(--ink);
+      font: 500 13px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      line-height:1.45; tab-size:2;
+    }
+    .right{
+      position:relative; min-width:0;
+      background:#0b1220;
+    }
+    .right .head{
+      position:absolute; top:.6rem; right:.6rem; display:flex; gap:.5rem; z-index:2;
+    }
+    iframe#preview{
+      width:100%; height:100%; border:0; background:white;
+    }
+    .note{
+      font-size:.82rem; color:var(--muted); padding: .2rem .8rem .6rem;
+    }
+    .kbd{
+      border:1px solid var(--border); border-bottom-color:#0a0a0a; border-radius:6px; padding:0 .3rem; font-weight:700;
+    }
+    .brand{font-weight:800; color:#a7f3d0}
+    .small{font-size:.85rem; color:#a1a1aa}
+    .hidden{display:none}
+
+    /* Welcome overlay */
+    .welcome-backdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,.55);
+      display:none; align-items:center; justify-content:center; z-index:50;
+    }
+    .welcome{
+      width:min(880px, 92vw);
+      background:#0b1220; border:1px solid var(--border);
+      border-radius:14px; box-shadow: 0 10px 30px rgba(0,0,0,.45);
+      overflow:hidden;
+    }
+    .welcome header{
+      display:flex; gap:.6rem; align-items:center;
+      padding:14px 16px; border-bottom:1px solid var(--border);
+      background:linear-gradient(180deg, #0e1628, #0b1220);
+    }
+    .welcome header h2{margin:0; font-size:1.05rem; color:#a7f3d0}
+    .welcome header img{height:28px}
+    .welcome .content{
+      padding:16px 18px; color:#d1d5db; line-height:1.55;
+      display:grid; grid-template-columns: 1fr; gap:12px;
+    }
+    .welcome .steps{display:grid; gap:10px}
+    .welcome .steps li{margin-left:18px}
+    .welcome footer{
+      display:flex; align-items:center; gap:12px; justify-content:space-between;
+      padding:12px 16px; border-top:1px solid var(--border);
+      color:#9ca3af; font-size:.92rem;
+    }
+    .welcome .actions{display:flex; gap:.5rem}
+    .link{color:#93c5fd; text-decoration:none}
+    .link:hover{ text-decoration:underline }
+    .checkbox{display:flex; align-items:center; gap:.45rem; user-select:none}
+    .checkbox input{accent-color:var(--accent)}
+
+    /* Footer credit */
+    .site-footer{
+      height:var(--footer-h); border-top:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center;
+      font-size:.88rem; color:#9ca3af; background:#0b1220;
+      gap:.4rem;
+    }
+    .site-footer a{ color:#93c5fd; text-decoration:none }
+    .site-footer a:hover{ text-decoration:underline }
+
+    @media (max-width: 1024px){
+      .layout{grid-template-columns:1fr; grid-template-rows: 55% 45%}
+      .right{grid-row:2}
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <img class="logo" src="https://www.lsts.edu.vn/images/icon/logo.svg" alt="LSTS logo" onerror="this.style.display='none'">
+    <h1><span class="brand">LSTS live server</span> — Live HTML/CSS/JS</h1>
+    <div class="spacer"></div>
+    <label class="toggle"><input id="autorun" type="checkbox" checked /> Auto-run</label>
+    <button id="runBtn" title="Run (Ctrl+Enter)">Run</button>
+    <button id="saveBtn" title="Save to this browser">Save</button>
+    <button id="loadBtn" title="Load from this browser">Load</button>
+    <button id="resetBtn" title="Clear editors">Reset</button>
+    <button id="exportBtn" title="Download a single runnable HTML file">Export .html</button>
+    <button id="exportCssBtn" title="Download CSS only">Export .css</button>
+    <!-- NEW: Import buttons -->
+    <button id="importHtmlBtn" title="Import an HTML file">Import .html</button>
+    <button id="importCssBtn" title="Import a CSS file">Import .css</button>
+    <!-- Hidden file inputs -->
+    <input id="importHtmlInput" type="file" accept=".html,.htm,text/html" class="hidden" />
+    <input id="importCssInput" type="file" accept=".css,text/css" class="hidden" />
+  </div>
+
+  <div class="layout">
+    <div class="left">
+      <section class="panel">
+        <div class="head"><div class="label">HTML</div><div class="small">Tip: Bấm <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> để chạy</div></div>
+        <textarea id="htmlInput" spellcheck="false"><h1>Chào LSTS 👋</h1>
+<p>Hãy chỉnh HTML ở đây.</p>
+</textarea>
+      </section>
+
+      <section class="panel">
+        <div class="head"><div class="label">CSS</div><div class="small">Áp dụng cho trang xem trước</div></div>
+        <textarea id="cssInput" spellcheck="false">body{font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding:24px;}
+h1{color:#2563eb}</textarea>
+      </section>
+
+      <section class="panel">
+        <div class="head"><div class="label">JS</div><div class="small">Chạy sau khi DOM load</div></div>
+        <textarea id="jsInput" spellcheck="false">console.log("Xin chào từ LSTS live server!")</textarea>
+      </section>
+    </div>
+
+    <div class="right">
+      <div class="head">
+        <span class="note">Bản xem trước an toàn (sandbox)</span>
+      </div>
+      <iframe id="preview" title="Live Preview" sandbox="allow-scripts allow-modals allow-forms allow-pointer-lock allow-popups"></iframe>
+    </div>
+  </div>
+
+  <!-- Welcome overlay -->
+  <div id="welcomeBackdrop" class="welcome-backdrop" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+    <div class="welcome">
+      <header>
+        <img src="https://www.lsts.edu.vn/images/icon/logo.svg" alt="LSTS" onerror="this.style.display='none'"/>
+        <h2 id="welcomeTitle">Chào mừng đến với <strong>LSTS live server</strong> 🎉</h2>
+      </header>
+      <div class="content">
+        <p><strong>LSTS live server</strong> là trình soạn thảo trực tiếp cho <em>HTML / CSS / JS</em> để dạy–học lập trình web tại LSTS.</p>
+        <ol class="steps">
+          <li>Gõ mã ở 3 khung <strong>HTML</strong>, <strong>CSS</strong>, <strong>JS</strong>.</li>
+          <li>Bật <strong>Auto‑run</strong> để xem trước tự động hoặc bấm <strong>Run</strong> (<span class="kbd">Ctrl</span>+<span class="kbd">Enter</span>).</li>
+          <li>Dùng <strong>Save / Load</strong> để lưu/phục hồi trong <em>trình duyệt</em> (localStorage).</li>
+          <li>Xuất mã bằng <strong>Export .html</strong> (một file chạy độc lập) hoặc <strong>Export .css</strong>.</li>
+          <li>Nhúng vào Canvas bằng thẻ <code>&lt;iframe&gt;</code> từ một đường dẫn HTTPS.</li>
+        </ol>
+        <p class="small"><strong>Lưu ý:</strong> Bản xem trước chạy trong <em>sandbox</em>; một số API hoặc truy cập liên miền có thể bị chặn. Canvas không cho nhúng trực tiếp &lt;script&gt; nên cần dùng iframe.</p>
+      </div>
+      <footer>
+        <label class="checkbox"><input id="noShowAgain" type="checkbox"> Đừng hiện lại lần sau</label>
+        <div class="actions">
+          <button id="insertTemplate">Chèn mẫu</button>
+          <button id="closeWelcome">Bắt đầu</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <span>© 2025 <strong>LSTS live server</strong> • Tạo bởi <strong>thầy Vũ Khang</strong> — GV ICT, <a class="link" href="https://www.lsts.edu.vn" target="_blank" rel="noopener">LSTS</a></span>
+  </footer>
+
+  <script>
+    const $ = (s)=>document.querySelector(s);
+    const html = $("#htmlInput");
+    const css  = $("#cssInput");
+    const js   = $("#jsInput");
+    const frame= $("#preview");
+    const autorun = $("#autorun");
+    const runBtn = $("#runBtn");
+    const saveBtn = $("#saveBtn");
+    const loadBtn = $("#loadBtn");
+    const resetBtn = $("#resetBtn");
+    const exportBtn = $("#exportBtn");
+    const exportCssBtn = $("#exportCssBtn");
+    const importHtmlBtn = $("#importHtmlBtn");
+    const importCssBtn = $("#importCssBtn");
+    const importHtmlInput = $("#importHtmlInput");
+    const importCssInput = $("#importCssInput");
+
+    const KEY = "lsts-liveserver-state-v1";
+
+    function buildDoc(h, c, j){
+      return `<!doctype html>
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="stylesheet" href="styles.css">
+<style id="lsts-inline">/* --- CSS từ LSTS live server --- */\\n${c}\\n</style>
+</head>
+<body>
+<!-- --- HTML từ LSTS live server --- -->
+${h}
+<script>
+// --- JS từ LSTS live server ---
+try{
+  window.addEventListener('DOMContentLoaded', function(){
+    (function(){ ${j}\\n }).call(window);
+  });
+}catch(e){ console.error(e); }
+//# sourceURL=lsts-user.js
+<\\/script>
+</body></html>`;
+    }
+
+    function render(){
+      const src = buildDoc(html.value, css.value, js.value);
+      frame.srcdoc = src;
+    }
+
+    function debounce(fn, ms=350){
+      let t; 
+      return (...args)=>{
+        clearTimeout(t);
+        t = setTimeout(()=>fn.apply(this,args), ms);
+      };
+    }
+
+    const auto = debounce(()=> autorun.checked && render(), 450);
+
+    html.addEventListener('input', auto);
+    css .addEventListener('input', auto);
+    js  .addEventListener('input', auto);
+
+    runBtn.addEventListener('click', render);
+    autorun.addEventListener('change', ()=> autorun.checked && render());
+
+    // Keyboard shortcut: Ctrl/Cmd+Enter
+    window.addEventListener('keydown', (e)=>{
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
+        e.preventDefault(); render();
+      }
+    });
+
+    // Save / Load / Reset
+    saveBtn.addEventListener('click', ()=>{
+      const data = {html: html.value, css: css.value, js: js.value};
+      localStorage.setItem(KEY, JSON.stringify(data));
+      saveBtn.textContent = "Saved ✓";
+      setTimeout(()=> saveBtn.textContent = "Save", 900);
+    });
+
+    loadBtn.addEventListener('click', ()=>{
+      const raw = localStorage.getItem(KEY);
+      if(!raw){ alert("Chưa có dữ liệu nào được lưu."); return; }
+      try{
+        const data = JSON.parse(raw);
+        html.value = data.html || "";
+        css.value  = data.css || "";
+        js.value   = data.js  || "";
+        render();
+      }catch(err){
+        alert("Không thể đọc dữ liệu đã lưu.");
+      }
+    });
+
+    resetBtn.addEventListener('click', ()=>{
+      if(!confirm("Xoá toàn bộ nội dung ba trình soạn thảo?")) return;
+      html.value = ""; css.value = ""; js.value = "";
+      render();
+    });
+
+    // Export to a single runnable HTML file
+    exportBtn.addEventListener('click', ()=>{
+      const combined = buildDoc(html.value, css.value, js.value);
+      const blob = new Blob([combined], {type:"text/html"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "lsts_live_server_export.html";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=> URL.revokeObjectURL(url), 2000);
+    });
+
+    // Export CSS only
+    exportCssBtn.addEventListener('click', ()=>{
+      const cssBlob = new Blob([css.value], {type:"text/css"});
+      const url = URL.createObjectURL(cssBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "styles.css";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=> URL.revokeObjectURL(url), 2000);
+    });
+
+    // ---------- NEW: Import HTML ----------
+    importHtmlBtn.addEventListener('click', ()=> importHtmlInput.click());
+    importHtmlInput.addEventListener('change', (e)=>{
+      const file = e.target.files && e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        html.value = String(reader.result || '');
+        render();
+        importHtmlBtn.textContent = "Imported ✓";
+        setTimeout(()=> importHtmlBtn.textContent = "Import .html", 1200);
+        importHtmlInput.value = "";
+      };
+      reader.onerror = () => alert("Không thể đọc file HTML.");
+      reader.readAsText(file);
+    });
+
+    // ---------- NEW: Import CSS ----------
+    importCssBtn.addEventListener('click', ()=> importCssInput.click());
+    importCssInput.addEventListener('change', (e)=>{
+      const file = e.target.files && e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        css.value = String(reader.result || '');
+        render();
+        importCssBtn.textContent = "Imported ✓";
+        setTimeout(()=> importCssBtn.textContent = "Import .css", 1200);
+        importCssInput.value = "";
+      };
+      reader.onerror = () => alert("Không thể đọc file CSS.");
+      reader.readAsText(file);
+    });
+
+    // ------- Welcome overlay logic
+    const WELCOME_KEY = "lsts-welcome-dismissed";
+    const welcomeBackdrop = $("#welcomeBackdrop");
+    const closeWelcomeBtn = $("#closeWelcome");
+    const noShowAgain = $("#noShowAgain");
+    const insertTemplateBtn = $("#insertTemplate");
+
+    function showWelcome(){
+      welcomeBackdrop.style.display = "flex";
+    }
+    function hideWelcome(){
+      welcomeBackdrop.style.display = "none";
+    }
+
+    // Only show if not dismissed
+    if(localStorage.getItem(WELCOME_KEY) !== "1"){
+      showWelcome();
+    }
+
+    closeWelcomeBtn && closeWelcomeBtn.addEventListener("click", ()=>{
+      if(noShowAgain && noShowAgain.checked){
+        localStorage.setItem(WELCOME_KEY, "1");
+      }
+      hideWelcome();
+    });
+
+    // Insert a starter template
+    insertTemplateBtn && insertTemplateBtn.addEventListener("click", ()=>{
+      html.value = `<header class="site-header">
+  <h1>Xin chào LSTS 👋</h1>
+  <p>Bạn đang dùng <strong>LSTS live server</strong> để thử HTML/CSS/JS.</p>
+</header>
+<main>
+  <button id="btn">Bấm tôi</button>
+  <p id="msg" class="muted">Tin nhắn sẽ hiện ở đây…</p>
+</main>`;
+
+      css.value = `:root{ --brand:#2563eb }
+*{ box-sizing:border-box; }
+body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin:0; padding:24px; background:#f8fafc }
+.site-header{ padding:12px 0 8px; border-bottom:2px dashed #e5e7eb; margin-bottom:18px }
+h1{ color:var(--brand); margin:0 0 6px }
+button{ padding:.55rem .8rem; border-radius:10px; border:1px solid #cbd5e1; background:white; cursor:pointer; font-weight:600 }
+button:hover{ border-color:#94a3b8 }
+.muted{ color:#64748b }`;
+
+      js.value = `document.getElementById("btn").addEventListener("click", ()=>{
+  const p = document.getElementById("msg");
+  p.textContent = "🎉 Xin chào từ JavaScript!";
+});`;
+      render();
+    });
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>
